@@ -10,14 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import MyGarden from "@/components/my-garden"
+import HealthOverview from "@/components/health-overview"
 import {
   Plus,
   Search,
   Grid3X3,
   List,
   Calendar,
-  TrendingUp,
-  Leaf,
   CheckCircle,
   AlertTriangle,
   XCircle,
@@ -35,16 +34,6 @@ export default function GardenPage() {
   const [filterType, setFilterType] = useState("all")
 
   // Mock garden data
-  const gardenStats = {
-    totalPlants: 12,
-    healthyPlants: 9,
-    atRiskPlants: 2,
-    criticalPlants: 1,
-    avgHealthScore: 87,
-    totalAnalyses: 45,
-    growthTrend: 12,
-  }
-
   const plants = [
     {
       id: 1,
@@ -310,75 +299,7 @@ export default function GardenPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-2">
-                    <Leaf className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="text-2xl font-bold">{gardenStats.totalPlants}</div>
-                  <div className="text-sm text-muted-foreground">Total Plants</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-2">
-                    <CheckCircle className="h-8 w-8 text-success" />
-                  </div>
-                  <div className="text-2xl font-bold">{gardenStats.healthyPlants}</div>
-                  <div className="text-sm text-muted-foreground">Healthy Plants</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-2">
-                    <TrendingUp className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="text-2xl font-bold">{gardenStats.avgHealthScore}%</div>
-                  <div className="text-sm text-muted-foreground">Avg Health</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-2">
-                    <Calendar className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="text-2xl font-bold">{gardenStats.totalAnalyses}</div>
-                  <div className="text-sm text-muted-foreground">Total Analyses</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Health Status Overview */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <Card className="status-healthy">
-                <CardContent className="p-6 text-center">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-3 text-success" />
-                  <div className="text-3xl font-bold text-success">{gardenStats.healthyPlants}</div>
-                  <div className="text-sm font-medium">Healthy Plants</div>
-                </CardContent>
-              </Card>
-
-              <Card className="status-warning">
-                <CardContent className="p-6 text-center">
-                  <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-warning" />
-                  <div className="text-3xl font-bold text-warning">{gardenStats.atRiskPlants}</div>
-                  <div className="text-sm font-medium">At Risk Plants</div>
-                </CardContent>
-              </Card>
-
-              <Card className="status-critical">
-                <CardContent className="p-6 text-center">
-                  <XCircle className="h-12 w-12 mx-auto mb-3 text-destructive" />
-                  <div className="text-3xl font-bold text-destructive">{gardenStats.criticalPlants}</div>
-                  <div className="text-sm font-medium">Critical Plants</div>
-                </CardContent>
-              </Card>
-            </div>
+            <HealthOverview />
           </TabsContent>
 
           <TabsContent value="plants" className="space-y-6">

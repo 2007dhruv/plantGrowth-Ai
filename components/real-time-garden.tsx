@@ -12,6 +12,12 @@ type PlantDoc = {
   probability?: number
   imageBase64?: string
   createdAt?: any
+  health?: {
+    status: "healthy" | "warning" | "critical"
+    score: number
+    issues?: string[]
+    tips?: string[]
+  }
 }
 
 export default function RealTimeGarden() {
@@ -48,6 +54,7 @@ export default function RealTimeGarden() {
           probability: typeof data?.probability === "number" ? data.probability : undefined,
           imageBase64: data?.imageBase64,
           createdAt: data?.createdAt,
+          health: data?.health,
         })
       })
       setPlants(next)
@@ -112,13 +119,44 @@ export default function RealTimeGarden() {
       return
     }
     try {
-      await addDoc(collection(db, "users", user.uid, "plants"), {
-        name: p.name,
-        commonNames: p.common_names,
-        probability: p.probability,
-        imageBase64: imageBase64 || null,
+      // Ask Gemini for health classification (non-blocking)
+      let health:
+        | { status: "healthy" | "warning" | "critical"; score: number; issues?: string[]; tips?: string[] }
+        | undefined
+      try {
+        const res = await fetch("/api/plant-health", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            speciesName: p.name,
+            commonNames: p.common_names,
+            notes: "",
+          }),
+        })
+        const data = await res.json()
+        if (res.ok && data?.status) {
+          health = {
+            status: data.status,
+            score: typeof data.score === "number" ? data.score : 0,
+            issues: Array.isArray(data.issues) ? data.issues : undefined,
+            tips: Array.isArray(data.tips) ? data.tips : undefined,
+          }
+        }
+      } catch {
+        // ignore health errors
+      }
+
+      // Build payload without undefined fields
+      const doc: any = {
+        name: p.name || "Unknown",
+        commonNames: Array.isArray(p.common_names) ? p.common_names : [],
         createdAt: serverTimestamp(),
-      })
+      }
+      if (typeof p.probability === "number") doc.probability = p.probability
+      if (imageBase64) doc.imageBase64 = imageBase64
+      if (health) doc.health = health
+
+      await addDoc(collection(db, "users", user.uid, "plants"), doc)
       // Clear predictions after save
       setPredictions([])
       setImageBase64(null)
@@ -232,6 +270,21 @@ export default function RealTimeGarden() {
                           Confidence: {(pl.probability * 100).toFixed(1)}%
                         </p>
                       ) : null}
+                      {pl.health && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Health Status: {pl.health.status}</p>
+                          {pl.health.issues?.length ? (
+                            <p className="text-xs text-muted-foreground">
+                              Issues: {pl.health.issues.slice(0, 3).join(", ")}
+                            </p>
+                          ) : null}
+                          {pl.health.tips?.length ? (
+                            <p className="text-xs text-muted-foreground">
+                              Tips: {pl.health.tips.slice(0, 3).join(", ")}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}

@@ -31,6 +31,8 @@ type PlantDoc = {
   wikiUrl?: string | null
   createdAt?: any
   notes?: string
+  imageBase64?: string // new
+  health?: { status: "healthy" | "warning" | "critical"; score: number; issues?: string[]; tips?: string[] } // optional
 }
 
 type Measurement = {
@@ -55,6 +57,7 @@ export default function MyGarden() {
 
   const [plants, setPlants] = React.useState<(PlantDoc & { id: string })[]>([])
   const [saveNotes, setSaveNotes] = React.useState("")
+  const [imageDataUrl, setImageDataUrl] = React.useState<string | null>(null) // new state
 
   const db = React.useMemo(() => getFirestore(), [])
   const auth = React.useMemo(() => getAuth(), [])
@@ -102,6 +105,8 @@ export default function MyGarden() {
     try {
       setIdentifyLoading(true)
       const base64 = await fileToBase64(file)
+      // ensure we have a dataURL for saving
+      setImageDataUrl(`data:image/jpeg;base64,${base64}`)
       const res = await fetch("/api/plant-id", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -141,24 +146,51 @@ export default function MyGarden() {
     }
     if (!identifyResult) return
 
-    const base = {
+    // Compute health using Gemini
+    let health:
+      | { status: "healthy" | "warning" | "critical"; score: number; issues?: string[]; tips?: string[] }
+      | undefined
+    try {
+      const res = await fetch("/api/plant-health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          speciesName: identifyResult.speciesName,
+          commonNames: identifyResult.commonNames,
+          notes: saveNotes?.trim() || "",
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data?.status) {
+        health = {
+          status: data.status,
+          score: typeof data.score === "number" ? data.score : 0,
+          issues: Array.isArray(data.issues) ? data.issues : undefined,
+          tips: Array.isArray(data.tips) ? data.tips : undefined,
+        }
+      }
+    } catch {
+      // Non-blocking: if health fails, still save the plant without health
+    }
+
+    // Build payload with conditional spreads (no undefined values)
+    const base: any = {
       userId: user.uid,
       speciesName: identifyResult.speciesName || "Unknown",
       createdAt: serverTimestamp(),
     }
 
-    const extra = {
-      probability: typeof identifyResult.probability === "number" ? identifyResult.probability : undefined,
-      commonNames:
-        Array.isArray(identifyResult.commonNames) && identifyResult.commonNames.length
-          ? identifyResult.commonNames
-          : undefined,
-      wiki: identifyResult.wiki && identifyResult.wiki.trim() ? identifyResult.wiki : undefined,
-      wikiUrl: identifyResult.wikiUrl || undefined,
-      notes: saveNotes.trim() ? saveNotes.trim() : undefined,
-    }
+    const extra: any = {}
+    if (typeof identifyResult.probability === "number") extra.probability = identifyResult.probability
+    if (Array.isArray(identifyResult.commonNames) && identifyResult.commonNames.length)
+      extra.commonNames = identifyResult.commonNames
+    if (identifyResult.wiki && identifyResult.wiki.trim()) extra.wiki = identifyResult.wiki
+    if (identifyResult.wikiUrl) extra.wikiUrl = identifyResult.wikiUrl
+    if (saveNotes.trim()) extra.notes = saveNotes.trim()
+    if (imageDataUrl) extra.imageBase64 = imageDataUrl
+    if (health) extra.health = health
 
-    const payload = omitUndefined({ ...base, ...extra })
+    const payload = { ...base, ...extra }
     await addDoc(collection(db, "plants"), payload)
 
     // reset
@@ -166,6 +198,7 @@ export default function MyGarden() {
     setIdentifyResult(null)
     setFile(null)
     setPreview(null)
+    setImageDataUrl(null)
   }
 
   function onChooseFile(f?: File | null) {
@@ -173,6 +206,14 @@ export default function MyGarden() {
     setFile(f)
     const url = URL.createObjectURL(f)
     setPreview(url)
+    // Also get a data URL to save with the plant
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setImageDataUrl(reader.result) // data:image/...;base64,....
+      }
+    }
+    reader.readAsDataURL(f)
   }
 
   async function addMeasurement(plantId: string, heightCm?: number, note?: string) {
@@ -317,6 +358,14 @@ export default function MyGarden() {
                       <a href={p.wikiUrl} target="_blank" rel="noreferrer" className="text-xs underline">
                         Details
                       </a>
+                    ) : null}
+                    {p.imageBase64 ? (
+                      <img
+                        src={p.imageBase64 || "/placeholder.svg"}
+                        alt="Plant"
+                        className="mt-2 h-24 w-full rounded-md object-cover"
+                        crossOrigin="anonymous"
+                      />
                     ) : null}
 
                     <MeasurementForm onSubmit={(h, note) => addMeasurement(p.id, h, note)} />
