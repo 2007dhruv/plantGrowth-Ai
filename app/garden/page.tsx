@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import MyGarden from "@/components/my-garden"
 import {
   Plus,
   Search,
@@ -301,7 +302,7 @@ export default function GardenPage() {
           </Button>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="plants" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="plants">Plants</TabsTrigger>
@@ -438,37 +439,7 @@ export default function GardenPage() {
             </div>
 
             {/* Plants Display */}
-            {filteredPlants.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Leaf className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">No plants found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    {searchQuery || filterStatus !== "all" || filterType !== "all"
-                      ? "Try adjusting your search or filters"
-                      : "Start by analyzing your first plant to add it to your garden"}
-                  </p>
-                  <Button asChild>
-                    <Link href="/">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Plant
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div
-                className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}
-              >
-                {filteredPlants.map((plant) =>
-                  viewMode === "grid" ? (
-                    <PlantCard key={plant.id} plant={plant} />
-                  ) : (
-                    <PlantListItem key={plant.id} plant={plant} />
-                  ),
-                )}
-              </div>
-            )}
+            <MyGarden />
           </TabsContent>
 
           <TabsContent value="calendar">
